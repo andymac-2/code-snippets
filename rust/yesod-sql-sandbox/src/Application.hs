@@ -144,6 +144,7 @@ develMain = develMainHelper getApplicationDev
 -- | The @main@ function for an executable running this site.
 appMain :: IO ()
 appMain = do
+    putStrLn "Hello World!"
     -- Get the settings from all relevant sources
     settings <- loadYamlSettingsArgs
         -- fall back to compile-time values, set to [] to require values at runtime
