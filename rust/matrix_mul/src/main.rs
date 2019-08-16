@@ -5,14 +5,8 @@ use std::io;
 
 #[derive(Copy, Clone, Debug, Hash)]
 struct Just(i32);
-
 #[derive(Copy, Clone, Debug, Hash)]
 struct Nil();
-
-trait Maybe {
-    fn is_nil(&self);
-    fn is_just(&self);
-}
 
 impl Add for Just {
     type Output = Just;
@@ -63,6 +57,7 @@ impl Mul<Just> for Nil {
         Nil()
     }
 }
+
 
 trait DotProduct {
     type Output;
