@@ -1,22 +1,56 @@
 use std::ops::Neg;
 use std::ops::Add;
 use std::ops::Mul;
-use std::mem::size_of_val;
+use std::mem::size_of;
 use std::io;
 
-#[derive(Copy, Clone, Debug, Hash)]
-struct Just(i32);
-#[derive(Copy, Clone, Debug, Hash)]
-struct Nil();
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Multivector3<E, E1, E2, E3, E12, E31, E23, E123> {
+    e: E,
+    e1: E1,
+    e2: E2,
+    e3: E3,
+    e12: E12,
+    e31: E31,
+    e23: E23,
+    e123: E123,
+}
+pub type W<T> = Multivector3<Just<T>, Nil, Nil, Nil, Nil, Nil, Nil, Nil>;
+pub type X<T> = Multivector3<Nil, Just<T>, Nil, Nil, Nil, Nil, Nil, Nil>;
+pub type Y<T> = Multivector3<Nil, Nil, Just<T>, Nil, Nil, Nil, Nil, Nil>;
+pub type Z<T> = Multivector3<Nil, Nil, Nil, Just<T>, Nil, Nil, Nil, Nil>;
+pub type XY<T> = Multivector3<Nil, Nil, Nil, Nil, Just<T>, Nil, Nil, Nil>;
+pub type ZX<T> = Multivector3<Nil, Nil, Nil, Nil, Nil, Just<T>, Nil, Nil>;
+pub type YZ<T> = Multivector3<Nil, Nil, Nil, Nil, Nil, Nil, Just<T>, Nil>;
+pub type XYZ<T> = Multivector3<Nil, Nil, Nil, Nil, Nil, Nil, Nil, Just<T>>;
+pub type Complex<T> = Multivector3<Just<T>, Nil, Nil, Nil, Nil, Nil, Nil, Just<T>>;
+pub type Vec3<T> = Multivector3<Nil, Just<T>, Just<T>, Just<T>, Nil, Nil, Nil, Nil>;
+pub type Bivec<T> = Multivector3<Nil, Nil, Nil, Nil, Just<T>, Just<T>, Just<T>, Nil>;
+pub type Rotor<T> = Multivector3<Just<T>, Nil, Nil, Nil, Just<T>, Just<T>, Just<T>, Nil>;
+pub type Line<T> = Multivector3<Nil, Just<T>, Just<T>, Just<T>, Just<T>, Just<T>, Just<T>, Nil>;
+pub type Sphere<T> = Multivector3<Just<T>, Just<T>, Just<T>, Just<T>, Nil, Nil, Nil, Nil>;
+pub type Plane<T> = Multivector3<Nil, Nil, Nil, Nil, Just<T>, Just<T>, Just<T>, Just<T>>;
+pub type Frame<T> = Multivector3<Just<T>, Just<T>, Just<T>, Just<T>, Just<T>, Just<T>, Just<T>, Just<T>>;
 
-impl Add for Just {
-    type Output = Just;
-    fn add(self, rhs: Just) -> Self::Output {
+macro_rules! mvec_e {
+    () => {
+        Multivector3<E, E1, E2, E3, E12, E31, E23, E123>
+    }
+}
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq)]
+pub struct Just<T>(T);
+#[derive(Copy, Clone, Debug, Hash, PartialEq)]
+pub struct Nil();
+
+impl<T: Add> Add for Just<T> {
+    type Output = Just<<T as Add>::Output>;
+    fn add(self, rhs: Self) -> Self::Output {
         Just(self.0 + rhs.0)
     }
 }
-impl Add<Nil> for Just {
-    type Output = Just;
+impl<T> Add<Nil> for Just<T> {
+    type Output = Self;
     fn add(self, _rhs: Nil) -> Self::Output {
         self
     }
@@ -27,20 +61,20 @@ impl Add for Nil {
         Nil()
     }
 }
-impl Add<Just> for Nil {
-    type Output = Just;
-    fn add(self, rhs: Just) -> Self::Output {
+impl<T> Add<Just<T>> for Nil {
+    type Output = Just<T>;
+    fn add(self, rhs: Just<T>) -> Self::Output {
         rhs
     }
 }
 
-impl Mul for Just {
-    type Output = Just;
-    fn mul(self, rhs: Just) -> Self::Output {
+impl<T: Mul> Mul for Just<T> {
+    type Output = Just<<T as Mul>::Output>;
+    fn mul(self, rhs: Self) -> Self::Output {
         Just(self.0 * rhs.0)
     }
 }
-impl Mul<Nil> for Just {
+impl<T> Mul<Nil> for Just<T> {
     type Output = Nil;
     fn mul(self, _rhs: Nil) -> Self::Output {
         Nil()
@@ -52,9 +86,9 @@ impl Mul for Nil {
         Nil()
     }
 }
-impl Mul<Just> for Nil {
+impl<T> Mul<Just<T>> for Nil {
     type Output = Nil;
-    fn mul(self, _rhs: Just) -> Self::Output {
+    fn mul(self, _rhs: Just<T>) -> Self::Output {
         Nil()
     }
 }
@@ -65,14 +99,14 @@ impl Neg for Nil {
         Nil()
     }
 }
-impl Neg for Just {
-    type Output = Just;
+impl<T: Neg> Neg for Just<T> {
+    type Output = Just<<T as Neg>::Output>;
     fn neg (self) -> Self::Output {
         Just(-self.0)
     }
 }
 
-trait VecScale {
+pub trait VecScale {
     type Output;
     fn value(self) -> Self::Output;
 }
@@ -105,7 +139,7 @@ where
     }
 }
 
-trait VecSum {
+pub trait VecSum {
     type Output;
     fn value(self) -> Self::Output ;
 }
@@ -186,23 +220,7 @@ where
     }
 }
 
-struct Multivector3<E, E1, E2, E3, E12, E31, E23, E123> {
-    e: E,
-    e1: E1,
-    e2: E2,
-    e3: E3,
-    e12: E12,
-    e31: E31,
-    e23: E23,
-    e123: E123,
-}
-macro_rules! mvec_e {
-    () => {
-        Multivector3<E, E1, E2, E3, E12, E31, E23, E123>
-    }
-}
-
-struct Se<T>(T);
+pub struct Se<T>(T);
 impl<T: Copy, E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy> 
     Mul<&mvec_e!()> for Se<T> 
 where 
@@ -232,7 +250,7 @@ where
     }
 }
 
-struct Se1<T>(T);
+pub struct Se1<T>(T);
 impl<T: Copy, E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy> 
     Mul<&mvec_e!()> for Se1<T> 
 where 
@@ -263,7 +281,7 @@ where
     }
 }
 
-struct Se2<T>(T);
+pub struct Se2<T>(T);
 impl<T: Copy, E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy> 
     Mul<&mvec_e!()> for Se2<T> 
 where 
@@ -293,7 +311,7 @@ where
         }
     }
 }
-struct Se3<T>(T);
+pub struct Se3<T>(T);
 impl<T: Copy, E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy> 
     Mul<&mvec_e!()> for Se3<T> 
 where 
@@ -324,7 +342,7 @@ where
     }
 }
 
-struct Se12<T>(T);
+pub struct Se12<T>(T);
 impl<T: Copy, E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy> 
     Mul<&Multivector3<E, E1, E2, E3, E12, E31, E23, E123>> for Se12<T> 
 where 
@@ -355,7 +373,7 @@ where
     }
 }
 
-struct Se31<T>(T);
+pub struct Se31<T>(T);
 impl<T: Copy, E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy> 
     Mul<&Multivector3<E, E1, E2, E3, E12, E31, E23, E123>> for Se31<T> 
 where 
@@ -386,7 +404,7 @@ where
     }
 }
 
-struct Se23<T>(T);
+pub struct Se23<T>(T);
 impl<T: Copy, E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy> 
     Mul<&mvec_e!()> for Se23<T> 
 where 
@@ -417,7 +435,7 @@ where
     }
 }
 
-struct Se123<T>(T);
+pub struct Se123<T>(T);
 impl<T: Copy, E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy> 
     Mul<&mvec_e!()> for Se123<T> 
 where 
@@ -450,8 +468,8 @@ where
 
 impl<E: Copy, E1: Copy, E2: Copy, E3: Copy, E12: Copy, E31: Copy, E23: Copy, E123: Copy,
     F: Copy, F1: Copy, F2: Copy, F3: Copy, F12: Copy, F31: Copy, F23: Copy, F123: Copy> 
-    Add<&mvec_e!()>
-    for &Multivector3<F, F1, F2, F3, F12, F31, F23, F123>
+    Add<mvec_e!()>
+    for Multivector3<F, F1, F2, F3, F12, F31, F23, F123>
 where
     F: Add<E>,
     F1: Add<E1>,
@@ -472,7 +490,7 @@ where
         <F23 as Add<E23>>::Output,
         <F123 as Add<E123>>::Output,
     >;
-    fn add(self, rhs: &mvec_e!()) -> Self::Output {
+    fn add(self, rhs: mvec_e!()) -> Self::Output {
         Multivector3 {
             e: self.e + rhs.e,
             e1: self.e1 + rhs.e1,
@@ -535,162 +553,141 @@ where
     }
 }
 
-
-
-trait DotProduct {
-    type Output;
-    fn value(&self) -> Self::Output;
-}
-impl<R1: Copy, R2: Copy, C1: Copy, C2: Copy> DotProduct for ((R1, R2), (C1, C2))
-where
-    R1: Mul<C1>,
-    R2: Mul<C2>,
-    <R1 as Mul<C1>>::Output: Add<<R2 as Mul<C2>>::Output>,
-{
-    type Output = <<R1 as Mul<C1>>::Output as Add<<R2 as Mul<C2>>::Output>>::Output;
-    fn value(&self) -> Self::Output{
-        let ((r1, r2), (c1, c2)) = *self;
-        r1 * c1 + r2 * c2
-    }
-}
-impl<R1: Copy, R2: Copy, R3: Copy, C1: Copy, C2: Copy, C3: Copy> DotProduct 
-for ((R1, R2, R3), (C1, C2, C3))
-where
-    ((R1, R2), (C1, C2)): DotProduct,
-    R3: Mul<C3>,
-    <((R1, R2), (C1, C2)) as DotProduct>::Output: Add<<R3 as Mul<C3>>::Output>
-{
-    type Output = <<((R1, R2), (C1, C2)) as DotProduct>::Output as Add<<R3 as Mul<C3>>::Output>>::Output;
-    fn value(&self) -> Self::Output{
-        let ((r1, r2, r3), (c1, c2, c3)) = *self;
-        ((r1, r2), (c1, c2)).value() + r3 * c3
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Matrix22<UL, UR, LL, LR> {
-    ul: UL, ur: UR,
-    ll: LL, lr: LR,
-}
-impl<UL1: Copy, UR1: Copy, LL1: Copy, LR1: Copy, UL2: Copy, UR2: Copy, LL2: Copy, LR2: Copy>
-    Mul<&Matrix22<UL2, UR2, LL2, LR2>> for &Matrix22<UL1, UR1, LL1, LR1> 
-where
-    ((UL1, UR1), (UL2, LL2)): DotProduct,
-    ((UL1, UR1), (UR2, LR2)): DotProduct,
-    ((LL1, LR1), (UL2, LL2)): DotProduct,
-    ((LL1, LR1), (UR2, LR2)): DotProduct,
-{
-    type Output = Matrix22<
-        <((UL1, UR1), (UL2, LL2)) as DotProduct>::Output, 
-        <((UL1, UR1), (UR2, LR2)) as DotProduct>::Output,
-        <((LL1, LR1), (UL2, LL2)) as DotProduct>::Output, 
-        <((LL1, LR1), (UR2, LR2)) as DotProduct>::Output,
-    >;
-
-    fn mul(self, rhs: &Matrix22<UL2, UR2, LL2, LR2>) -> Self::Output {
-        Matrix22 {
-            ul: ((self.ul, self.ur), (rhs.ul, rhs.ll)).value(),
-            ur: ((self.ul, self.ur), (rhs.ur, rhs.lr)).value(),
-            ll: ((self.ll, self.lr), (rhs.ul, rhs.ll)).value(),
-            lr: ((self.ll, self.lr), (rhs.ur, rhs.lr)).value(),
-        }
-    }
-}
-impl<UL1: Copy, UR1: Copy, LL1: Copy, LR1: Copy, UL2: Copy, UR2: Copy, LL2: Copy, LR2: Copy>
-    Add<&Matrix22<UL2, UR2, LL2, LR2>> for &Matrix22<UL1, UR1, LL1, LR1> 
-where
-    UL1: Add<UL2>,
-    UR1: Add<UR2>,
-    LL1: Add<LL2>,
-    LR1: Add<LR2>,
-{
-    type Output = Matrix22<
-        <UL1 as Add<UL2>>::Output, 
-        <UR1 as Add<UR2>>::Output,
-        <LL1 as Add<LL2>>::Output,
-        <LR1 as Add<LR2>>::Output
-    >;
-
-    fn add(self, rhs: &Matrix22<UL2, UR2, LL2, LR2>) -> Self::Output {
-        Matrix22 {
-            ul: self.ul + rhs.ul,
-            ur: self.ur + rhs.ur,
-            ll: self.ll + rhs.ll,
-            lr: self.lr + rhs.lr,
-        }
-    }
-}
-
-
-
-fn main() {
+pub fn main() {
     let mut line_buf = String::new();
     io::stdin().read_line(&mut line_buf).unwrap();
     let mut nums = line_buf.split_whitespace()
         .map(|str| str.parse::<i32>().unwrap());
 
-    let matrix_identity = Matrix22 {
-        ul: Just(1),   ur: Nil(),
-        ll: Nil(),      lr: Just(1),
-    };
-    let matrix_full = Matrix22 {
-        ul: Just(nums.next().unwrap()),   ur: Just(nums.next().unwrap()),
-        ll: Just(nums.next().unwrap()),   lr: Just(nums.next().unwrap()),
-    };
-    let result = &matrix_identity * &matrix_full;
-    let result = &matrix_identity * &result;
-    let result = &result * &matrix_identity;
-    let result = &matrix_identity * &result;
-    let result = &result * &matrix_identity;
-    let result = &matrix_identity * &result;
-    let result = &result * &matrix_identity;
-    let result = &matrix_identity * &result;
-    let result = &result * &matrix_identity;
-    let result = &matrix_identity * &result;
-    let result = &result * &matrix_identity;
+    let a = nums.next().unwrap();
+    let b = nums.next().unwrap();
 
-    println!("[{:?},\t {:?}]\n[{:?},\t {:?}]", &result.ul, &result.ur, &result.ll, &result.lr)
+    let ma = Multivector3 {
+        e: Just(a), 
+        e1: Nil(), e2: Nil(), e3: Nil(), 
+        e12: Nil(), e31: Nil(), e23: Nil(), 
+        e123: Nil()
+    };
+    let mb = Multivector3 {
+        e: Just(b), 
+        e1: Nil(), e2: Nil(), e3: Nil(), 
+        e12: Nil(), e31: Nil(), e23: Nil(), 
+        e123: Nil()
+    };
+
+    // HOLY SHIT!!! Rust is smart enough to figure out that both the regular
+    // multiplication and the multivector multiplication are the same thing, and
+    // not only optimises the multivector multiplication to a single
+    // insturction, but also merges that with the original multiplication. This
+    // is despite the fact that the multivector multiplication implementation is
+    // hundreds of lines long.
+    println!("Regular multiplication: {:?}", a * b);
+    println!("Multivector multiplication: {:?}", &ma * &mb);
 }
 
+#[cfg(test)]
+mod test {
+    use super:: *;
 
-// #[derive(Clone, Debug)]
-// struct Matrix33<UL, UM, UR, ML, MM, MR, LL, LM, LR> {
-//     ul: UL, um: UM, ur: UR,
-//     ml: ML, mm: MM, mr: MR,
-//     ll: LL, lm: LM, lr: LR,
-// }
-// impl<UL1: Copy, UM1: Copy, UR1: Copy, 
-//     ML1: Copy, MM1: Copy, MR1: Copy, 
-//     LL1: Copy, LM1: Copy, LR1: Copy,
-//     UL2: Copy, UM2: Copy, UR2: Copy, 
-//     ML2: Copy, MM2: Copy, MR2: Copy, 
-//     LL2: Copy, LM2: Copy, LR2: Copy>
-//     Mul<&Matrix33<UL2, UM2, UR2, ML2, MM2, MR2, LL2, LM2, LR2>> 
-//     for &Matrix33<UL1, UM1, UR1, ML1, MM1, MR1, LL1, LM1, LR1> 
-// where
-//     ((UL1, UM1, UR1), (UL2, ML2, LL2)): DotProduct,
-//     ((UL1, UM1, UR1), (UM2, MM2, LM2)): DotProduct,
-//     ((UL1, UM1, UR1), (UR2, MR2, LR2)): DotProduct,
-//     ((ML1, MM1, MR1), (UL2, ML2, LL2)): DotProduct,
-//     ((ML1, MM1, MR1), (UM2, MM2, LM2)): DotProduct,
-//     ((ML1, MM1, MR1), (UR2, MR2, LR2)): DotProduct,
-//     ((LL1, LM1, LR1), (UL2, ML2, LL2)): DotProduct,
-//     ((LL1, LM1, LR1), (UM2, MM2, LM2)): DotProduct,
-//     ((LL1, LM1, LR1), (UR2, MR2, LR2)): DotProduct,
-// {
-//     type Output = Matrix33<
-//         <((UL1, UR1), (UL2, LL2)) as DotProduct>::Output, 
-//         <((UL1, UR1), (UR2, LR2)) as DotProduct>::Output,
-//         <((LL1, LR1), (UL2, LL2)) as DotProduct>::Output, 
-//         <((LL1, LR1), (UR2, LR2)) as DotProduct>::Output,
-//     >;
+    #[test]
+    fn multiply_in_parts() {
+        let a = Multivector3 {
+            e: 2,
+            e1: 1, e2: 7, e3: -5,
+            e12: -3, e31: 5, e23: 2,
+            e123: -7,
+        };
+        let scalar = Se(1);
+        assert_eq!(scalar * &a, a);
 
-//     fn mul(self, rhs: &Matrix22<UL2, UR2, LL2, LR2>) -> Self::Output {
-//         Matrix22 {
-//             ul: ((self.ul, self.ur), (rhs.ul, rhs.ll)).value(),
-//             ur: ((self.ul, self.ur), (rhs.ur, rhs.lr)).value(),
-//             ll: ((self.ll, self.lr), (rhs.ul, rhs.ll)).value(),
-//             lr: ((self.ll, self.lr), (rhs.ur, rhs.lr)).value(),
-//         }
-//     }
-// }
+        let e = Se(10);
+        let re = e * &a;
+        assert_eq!(re, Multivector3 { 
+            e: 20, e1: 10, e2: 70, e3: -50, e12: -30, e31: 50, e23: 20, e123: -70 
+        });
+        let e1 = Se1(2);
+        let re1 = e1 * &a;
+        assert_eq!(re1, Multivector3 { 
+            e: 2, e1: 4, e2: -6, e3: -10, e12: 14, e31: 10, e23: -14, e123: 4 
+        });
+        let e2 = Se2(3);
+        let re2 = e2 * &a;
+        assert_eq!(re2, Multivector3 { 
+            e: 21, e1: 9, e2: 6, e3: 6, e12: -3, e31: -21, e23: -15, e123: 15 
+        });
+        let e3 = Se3(4);
+        let re3 = e3 * &a;
+        assert_eq!(re3, Multivector3 { 
+            e: -20, e1: 20, e2: -8, e3: 8, e12: -28, e31: 4, e23: -28, e123: -12 
+        });
+        let e12 = Se12(1);
+        let re12 = e12 * &a;
+        assert_eq!(re12, Multivector3 { 
+            e: 3, e1: 7, e2: -1, e3: 7, e12: 2, e31: -2, e23: 5, e123: -5 
+        });
+        let e31 = Se31(6);
+        let re31 = e31 * &a;
+        assert_eq!(re31, Multivector3 { 
+            e: -30, e1: 30, e2: 42, e3: 6, e12: 12, e31: 12, e23: 18, e123: 42 
+        });
+        let e23 = Se23(2);
+        let re23 = e23 * &a;
+        assert_eq!(re23, Multivector3 { 
+            e: -4, e1: 14, e2: -10, e3: -14, e12: -10, e31: -6, e23: 4, e123: 2 
+        });
+        let e123 = Se123(0);
+        let re123 = e123 * &a;
+        assert_eq!(re123, Multivector3 { 
+             e: 0, e1: 0, e2: 0, e3: 0, e12: 0, e31: 0, e23: 0, e123: 0 
+        });
+
+        assert_eq!((re, re1, re2, re3, re12, re31, re23, re123).value(), Multivector3 { 
+             e: -8, e1: 94, e2: 93, e3: -47, e12: -43, e31: 47, e23: -10, e123: -24
+        });
+
+    }
+
+    #[test]
+    fn add_full() {
+        let b = Multivector3 {
+            e: Just(10),
+            e1: Just(2), e2: Just(3), e3: Just(4),
+            e12: Just(1), e31: Just(6), e23: Just(2),
+            e123: Just(0),
+        };
+        let a = Multivector3{
+            e: Just(2),
+            e1: Just(1), e2: Just(7), e3: Just(-5),
+            e12: Just(-3), e31: Just(5), e23: Just(2),
+            e123: Just(-7),
+        };
+        let result = Multivector3 {
+            e: Just(12), 
+            e1: Just(3), e2: Just(10), e3: Just(-1), 
+            e12: Just(-2), e31: Just(11), e23: Just(4), 
+            e123: Just(-7)
+        };
+        assert_eq!(b + a, result);
+    }
+
+    #[test]
+    fn miltivector_compile_tests() {
+        fn  mul_scalar (a: W<f64>, b: W<f64>) -> W<f64> {
+            &a * &b
+        }
+        fn mul_vector (a: Vec3<f64>, b: Vec3<f64>) -> Rotor<f64> {
+            &a * &b
+        }
+        fn mul_complex (a: Complex<f64>, b: Complex<f64>) -> Complex<f64> {
+            &a * &b
+        }
+    }
+
+    #[test] 
+    fn sizes () {
+        assert_eq!(size_of::<W<f64>>(), size_of::<f64>());
+        assert_eq!(size_of::<Vec3<f64>>(), size_of::<f64>() * 3);
+        assert_eq!(size_of::<Bivec<f64>>(), size_of::<f64>() * 3);
+        assert_eq!(size_of::<Sphere<f64>>(), size_of::<f64>() * 4);
+    }
+}
